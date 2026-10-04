@@ -1,0 +1,680 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Week 9 · Data That Travels</title>
+<meta name="description" content="INE 315 Week 9: dictionaries, JSON and callbacks, one card at a time.">
+<style>
+:root{
+  --bg:#faf9f7; --panel:#ffffff; --panel-2:#f3f2ef; --ink:#1b1b1a; --ink-2:#3d3d3a; --ink-3:#77766f;
+  --line:#e0dfda; --line-soft:#eceae5; --code-bg:#f7f6f3; --com:#8a8880;
+  --red:#A93226; --red-soft:rgba(169,50,38,.09); --blue:#2874A6; --blue-soft:rgba(40,116,166,.10);
+  --ok:#1e7a4b; --ok-soft:rgba(30,122,75,.10); --bad:#b0382a; --bad-soft:rgba(176,56,42,.09);
+  --amber:#c77a00;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#16161a; --panel:#1e1e23; --panel-2:#26262c; --ink:#f0efea; --ink-2:#d2d1ca; --ink-3:#9a998f;
+    --line:#33333a; --line-soft:#2a2a30; --code-bg:#1a1a20; --com:#807f76;
+    --red:#D0655A; --red-soft:rgba(208,101,90,.14); --blue:#5BA3D6; --blue-soft:rgba(91,163,214,.14);
+    --ok:#4cb07a; --ok-soft:rgba(76,176,122,.14); --bad:#e06a5a; --bad-soft:rgba(224,106,90,.14);
+    --amber:#e0a94a;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#16161a; --panel:#1e1e23; --panel-2:#26262c; --ink:#f0efea; --ink-2:#d2d1ca; --ink-3:#9a998f;
+  --line:#33333a; --line-soft:#2a2a30; --code-bg:#1a1a20; --com:#807f76;
+  --red:#D0655A; --red-soft:rgba(208,101,90,.14); --blue:#5BA3D6; --blue-soft:rgba(91,163,214,.14);
+  --ok:#4cb07a; --ok-soft:rgba(76,176,122,.14); --bad:#e06a5a; --bad-soft:rgba(224,106,90,.14);
+  --amber:#e0a94a;
+}
+*{box-sizing:border-box}
+html,body{margin:0; padding:0}
+body{background:var(--bg); color:var(--ink); font:17px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  -webkit-font-smoothing:antialiased; padding-bottom:86px}
+code,pre,kbd{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+code{background:var(--panel-2); border-radius:5px; padding:1px 5px; font-size:.88em}
+kbd{background:var(--panel-2); border:1px solid var(--line); border-bottom-width:2px; border-radius:5px; padding:0 5px; font-size:.82em}
+b{font-weight:700}
+.top{position:sticky; top:0; z-index:20; background:color-mix(in srgb,var(--bg) 88%,transparent); backdrop-filter:blur(8px); border-bottom:1px solid var(--line)}
+.in{max-width:1180px; margin:0 auto; padding:9px 16px; display:flex; gap:12px; align-items:center}
+.brand{font-weight:700; font-size:.9rem; white-space:nowrap}
+.brand span{color:var(--red)}
+.chips{display:flex; gap:6px; overflow-x:auto; flex:1; scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{border:1px solid var(--line); background:var(--panel); color:var(--ink-2); border-radius:99px; padding:4px 12px;
+  font:inherit; font-size:.8rem; white-space:nowrap; cursor:pointer}
+.chip.on{background:var(--ink); color:var(--bg); border-color:var(--ink)}
+.chip.sep{cursor:default; border-style:dashed; color:var(--ink-3); font-weight:700; background:transparent}
+.tools{display:flex; gap:8px; align-items:center}
+.tbtn{border:1px solid var(--line); background:var(--panel); color:var(--ink-2); border-radius:8px; padding:4px 10px; font:inherit; font-size:.78rem; cursor:pointer}
+.timer{font-variant-numeric:tabular-nums; font-weight:700; font-size:.85rem; color:var(--ink-3); display:none; cursor:pointer}
+.timer.on{display:inline}
+.timer.up{color:var(--red)}
+main{max-width:1180px; margin:0 auto; padding:22px 16px 0}
+.card{background:var(--panel); border:1px solid var(--line); border-radius:18px; padding:26px 28px; animation:in .18s ease-out}
+@keyframes in{from{opacity:0; transform:translateY(4px)}to{opacity:1; transform:none}}
+.ctype{display:flex; gap:10px; align-items:center; font-size:.7rem; letter-spacing:.09em; text-transform:uppercase; color:var(--ink-3); font-weight:700; margin-bottom:8px}
+.pill{border-radius:99px; padding:3px 10px; background:var(--panel-2); color:var(--ink-2)}
+.pill.blue{background:var(--blue-soft); color:var(--blue)}
+.pill.green{background:var(--ok-soft); color:var(--ok)}
+.pill.red{background:var(--red-soft); color:var(--red)}
+h1{font-size:clamp(1.7rem,3.6vw,2.3rem); line-height:1.15; margin:.1em 0 .3em}
+h2{font-size:clamp(1.25rem,2.6vw,1.7rem); line-height:1.2; margin:.1em 0 .45em}
+h3{font-size:1rem; margin:.2em 0 .3em}
+p.lead{color:var(--ink-2); margin:.2em 0 1em}
+.two{display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:26px}
+.two.wide-left{grid-template-columns:minmax(0,1.15fr) minmax(0,1fr)}
+@media (max-width:820px){ .two,.two.wide-left{grid-template-columns:minmax(0,1fr); gap:16px} }
+ul.points{margin:.2em 0; padding:0; list-style:none}
+ul.points li{position:relative; padding-left:1.7em; margin:.55em 0}
+ul.points li::before{counter-increment:p; content:counter(p); position:absolute; left:0; top:.15em; width:1.15em; height:1.15em;
+  border-radius:50%; background:var(--red-soft); color:var(--red); font-size:.72em; font-weight:800; display:grid; place-items:center}
+ul.points{counter-reset:p}
+.notebox{margin-top:14px; background:var(--panel-2); border-radius:12px; padding:11px 15px; font-size:.93rem}
+.tag{font-size:.66rem; font-weight:800; letter-spacing:.08em; border-radius:6px; padding:2px 7px; margin-left:8px; vertical-align:middle;
+  background:var(--panel-2); color:var(--ink-3); border:1px solid var(--line)}
+.tag.PYTHON{background:var(--red-soft); color:var(--red); border-color:var(--red)}
+pre.code{margin:0; background:var(--code-bg); border:1px solid var(--line); border-radius:13px; padding:12px 0; font-size:.9rem; line-height:1.65; overflow-x:auto}
+pre.code.big{font-size:.95rem}
+.ln{display:block; padding:0 16px 0 0; white-space:pre}
+.ln .no{display:inline-block; width:2.4em; padding-right:.9em; text-align:right; color:var(--ink-3); opacity:.6; user-select:none}
+.ln.click{cursor:pointer}
+.ln.click:hover{background:var(--panel-2)}
+.ln.cur{background:var(--blue-soft)}
+.ln.right{background:var(--ok-soft)} .ln.wrong{background:var(--bad-soft)}
+.tk-kw{color:var(--red); font-weight:700} .tk-str{color:var(--blue)} .tk-num{color:var(--amber)}
+.tk-com{color:var(--com); font-style:italic} .tk-fn{color:var(--blue)}
+.opts{display:grid; gap:9px}
+.opt{display:flex; gap:11px; align-items:flex-start; text-align:left; border:1px solid var(--line); background:var(--panel);
+  border-radius:12px; padding:10px 13px; font:inherit; cursor:pointer; color:var(--ink)}
+.opt:hover{border-color:var(--ink-3)}
+.opt .l{font-weight:800; color:var(--ink-3)}
+.opt pre{margin:0; font-size:.86rem; white-space:pre-wrap; word-break:break-word}
+.opt.right{border-color:var(--ok); background:var(--ok-soft)}
+.opt.right .l{color:var(--ok)}
+.opt.dim{opacity:.45}
+.reveal{max-height:0; overflow:hidden; opacity:0; transition:max-height .25s ease,opacity .25s ease}
+.reveal.show{max-height:2200px; opacity:1; margin-top:14px}
+.cap{font-size:.68rem; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-3); font-weight:800; margin:10px 0 5px}
+pre.out{margin:0; background:var(--panel-2); border:1px solid var(--line); border-radius:11px; padding:10px 14px;
+  font-size:.9rem; white-space:pre; overflow-x:auto; min-height:2.4em}
+pre.out.empty{color:var(--ink-3); font-style:italic}
+.ask{font-size:.9rem; color:var(--ink-3); margin-top:10px}
+.btn{border:1px solid var(--line); background:var(--panel); color:var(--ink); border-radius:10px; padding:7px 15px; font:inherit; cursor:pointer}
+.btn.primary{background:var(--red); border-color:var(--red); color:#fff; font-weight:700}
+.btn.blue{background:var(--blue); border-color:var(--blue); color:#fff; font-weight:700}
+.btn.sm{padding:5px 11px; font-size:.86rem}
+.btn:disabled{opacity:.45; cursor:default}
+.row{display:flex; gap:9px; align-items:center; flex-wrap:wrap}
+.stepinfo{font-size:.85rem; color:var(--ink-3)}
+.note{background:var(--panel-2); border-left:3px solid var(--red); border-radius:0 10px 10px 0; padding:10px 14px; font-size:.94rem; min-height:3.2em}
+table.vars{width:100%; border-collapse:collapse; font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:.86rem}
+table.vars td{padding:4px 8px; border-bottom:1px dotted var(--line-soft)}
+table.vars td:first-child{color:var(--ink-2); width:45%}
+table.vars td:last-child{color:var(--red); font-weight:700}
+table.vars tr.chg td{background:var(--red-soft)}
+.frame{border:1px solid var(--line); border-radius:11px; padding:7px 9px; margin-bottom:9px; background:var(--panel)}
+.frame .fh{font-size:.68rem; text-transform:uppercase; letter-spacing:.07em; color:var(--ink-3); font-weight:800; margin-bottom:3px}
+.pz{display:grid; gap:6px; margin-top:8px; overflow-x:auto}
+.pzl{display:flex; gap:10px; align-items:center; min-width:0; border:1px solid var(--line); border-radius:10px; padding:5px 10px; background:var(--panel)}
+.pzl.ok{border-color:var(--ok); background:var(--ok-soft)} .pzl.no{border-color:var(--bad); background:var(--bad-soft)}
+.pzl .ctl{display:flex; gap:4px}
+.pzl .ctl button{width:26px; height:26px; border:1px solid var(--line); background:var(--panel-2); color:var(--ink); border-radius:7px; cursor:pointer; font-size:.8rem}
+.pzl .txt{flex:1; font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:.88rem; white-space:pre}
+.pzl .mark{font-weight:800; width:1em}
+.fb{margin-top:10px; font-size:.95rem}
+.errline{margin-top:12px; background:var(--bad-soft); border:1px solid var(--bad); border-radius:11px; padding:10px 14px;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:.88rem}
+.cause{margin-top:12px; background:var(--panel-2); border-radius:12px; padding:12px 15px; font-size:.94rem}
+.exp{margin-top:12px; display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:10px}
+.exp .box{border-radius:11px; padding:8px 12px; font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:.87rem; white-space:pre-wrap}
+.exp .want{background:var(--ok-soft); border:1px solid var(--ok)}
+.exp .got{background:var(--bad-soft); border:1px solid var(--bad)}
+.exp .k{display:block; font-family:inherit; font-size:.66rem; letter-spacing:.07em; text-transform:uppercase; font-weight:800; color:var(--ink-3); margin-bottom:2px}
+.cls{display:grid; gap:8px; margin-top:8px}
+.clrow{display:flex; gap:10px; align-items:center; flex-wrap:wrap; border:1px solid var(--line); border-radius:11px; padding:8px 13px; background:var(--panel)}
+.clrow.ok{border-color:var(--ok); background:var(--ok-soft)} .clrow.no{border-color:var(--bad); background:var(--bad-soft)}
+.clrow .cli{flex:1; min-width:150px}
+.clb{display:flex; gap:6px; flex-wrap:wrap}
+.binb{font:inherit; font-size:.82rem; border:1px solid var(--line); background:var(--panel-2); color:var(--ink-2); border-radius:99px; padding:4px 12px; cursor:pointer}
+.binb.on{background:var(--ink); color:var(--bg); border-color:var(--ink)}
+.clrow .mark{font-weight:800; width:1em}
+.ftab{width:100%; border-collapse:collapse; font-size:.94rem; margin-top:10px}
+.ftab td{padding:7px 10px; border-bottom:1px solid var(--line-soft); vertical-align:top}
+.ftab{table-layout:fixed}
+.ftab td:first-child{width:40%}
+.ftab td:last-child{overflow-wrap:anywhere}
+.ftab td:last-child{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; color:var(--blue); font-size:.86rem}
+.ftab th{text-align:left; font-size:.68rem; letter-spacing:.07em; text-transform:uppercase; color:var(--ink-3); padding:4px 10px; border-bottom:1px solid var(--line)}
+.etab,.sum{width:100%; border-collapse:collapse; font-size:.94rem}
+.etab th,.sum th{text-align:left; font-size:.68rem; letter-spacing:.07em; text-transform:uppercase; color:var(--ink-3); padding:6px 9px; border-bottom:1px solid var(--line)}
+.etab td,.sum td{padding:8px 9px; border-bottom:1px solid var(--line-soft); vertical-align:top}
+.etab td:last-child{color:var(--ink-3)}
+.sum td:first-child{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; color:var(--blue)}
+.sum td{overflow-wrap:anywhere}
+.chatbar{display:flex; gap:12px; align-items:center; background:var(--panel-2); border-radius:12px; padding:11px 15px; margin-top:16px; font-size:.93rem}
+.exlist{display:grid; grid-template-columns:minmax(0,1fr); gap:10px; margin-top:6px}
+.ex{border:1px solid var(--line); border-radius:12px; padding:11px 15px; background:var(--panel); min-width:0}
+.ex .h{display:flex; gap:9px; align-items:center; flex-wrap:wrap}
+.ex .id{font-weight:800; color:var(--red)}
+.ex .kind{font-size:.68rem; text-transform:uppercase; letter-spacing:.06em; font-weight:800; border-radius:6px; padding:2px 7px; background:var(--panel-2); color:var(--ink-3)}
+.ex .task{margin:6px 0 0; font-size:.94rem; color:var(--ink-2)}
+.star{font-size:.72rem; color:var(--amber); font-weight:700}
+.session{min-height:58vh; display:flex; flex-direction:column; justify-content:center}
+.banner{display:inline-block; font-size:.78rem; font-weight:800; letter-spacing:.12em; text-transform:uppercase; background:var(--red); color:#fff; border-radius:99px; padding:4px 14px; margin-bottom:12px}
+.banner.s2{background:var(--blue)}
+.recap{background:var(--panel-2); border-radius:12px; padding:12px 16px; margin:10px 0 16px; font-size:.95rem}
+.demolist{display:grid; gap:8px; margin-top:6px}
+.demolist div{border:1px solid var(--line); border-radius:10px; padding:8px 12px; background:var(--panel)}
+.rhythm{display:grid; grid-template-columns:repeat(auto-fit,minmax(min(150px,100%),1fr)); gap:10px; margin-top:18px}
+.rh{border:1px solid var(--line); border-radius:12px; padding:10px 12px; background:var(--panel)}
+.rh .k{font-size:.7rem; font-weight:800; color:var(--red)}
+.rh .t{font-weight:700; font-size:.95rem}
+.rh .d{font-size:.84rem; color:var(--ink-3)}
+.hint{font-size:.83rem; color:var(--ink-3); margin-top:6px}
+.tasks{margin:10px 0 0; padding-left:1.2em; font-size:.95rem}
+.tasks li{margin:5px 0}
+.livecode{margin:0; background:var(--code-bg); border:1px solid var(--line); border-radius:12px; padding:11px 15px;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:.86rem; white-space:pre-wrap; word-break:break-word; line-height:1.6}
+.livecode .res{color:var(--red); font-weight:700}
+.livecode .cm{color:var(--com); font-style:italic}
+.livecode .on{color:var(--ok); font-weight:700}
+/* --- live widgets --- */
+.panelbox{border:1px solid var(--line); border-radius:14px; padding:12px 14px; background:var(--panel); min-width:0}
+.panelbox h4{margin:0 0 8px; font-size:.95rem}
+.panelbox.bad{border-color:var(--bad)}
+.btnrow{display:flex; gap:10px; flex-wrap:wrap; margin:6px 0 12px}
+.push{border:1px solid var(--line); border-radius:12px; padding:9px 14px; font:inherit; font-weight:700; font-size:.86rem;
+  background:var(--panel-2); color:var(--ink-2); cursor:pointer; user-select:none}
+.push.on{color:#fff}
+.push.estop.on{background:var(--red); border-color:var(--red)}
+.push.stop.on{background:var(--ink-3); border-color:var(--ink-3)}
+.push.start.on{background:var(--ok); border-color:var(--ok)}
+.lamp{display:flex; gap:10px; align-items:center; font-weight:700; font-size:.9rem}
+.bulb{width:30px; height:30px; border-radius:50%; border:2px solid var(--line); background:var(--panel-2)}
+.bulb.lit{background:var(--amber); border-color:var(--amber); box-shadow:0 0 14px var(--amber)}
+.codeline{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:.83rem; padding:2px 6px; border-radius:6px; white-space:pre; overflow-x:auto}
+#chain,#steps{overflow-x:auto}
+.codeline.hit{background:var(--blue-soft)}
+.codeline.dead{opacity:.4}
+.sl{display:grid; grid-template-columns:6.4em minmax(0,1fr) 4em; gap:10px; align-items:center; margin:8px 0; font-size:.9rem}
+.sl input[type=range]{width:100%; accent-color:var(--blue)}
+.sl b{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; text-align:right}
+.tin{display:grid; grid-template-columns:6.4em minmax(0,1fr); gap:10px; align-items:center; margin:8px 0; font-size:.9rem}
+.tin input[type=text],.tin input[type=number]{font:inherit; font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:.9rem;
+  padding:6px 10px; border:1px solid var(--line); border-radius:9px; background:var(--panel-2); color:var(--ink); width:100%}
+.console{background:#14141a; color:#e8e7e1; border-radius:12px; padding:10px 13px; font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  font-size:.82rem; line-height:1.55; height:210px; overflow-y:auto; border:1px solid var(--line)}
+.console .t{color:#8fb7d8} .console .m{color:#e8e7e1} .console .me{color:#f0b429; font-weight:700} .console .sys{color:#8a8880; font-style:italic}
+svg.dg{display:block; width:100%; height:auto}
+svg.dg .bx{fill:var(--panel-2); stroke:var(--line); stroke-width:1.5}
+svg.dg .bx.acc{fill:var(--red-soft); stroke:var(--red)}
+svg.dg .bx.b2{fill:var(--blue-soft); stroke:var(--blue)}
+svg.dg .tx{fill:var(--ink); font:600 13px -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+svg.dg .sm{fill:var(--ink-3); font:500 11px -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+svg.dg .ar{stroke:var(--ink-3); stroke-width:1.6; fill:none; marker-end:url(#ah)}
+.nav{position:fixed; left:0; right:0; bottom:0; background:color-mix(in srgb,var(--bg) 92%,transparent); backdrop-filter:blur(8px); border-top:1px solid var(--line); z-index:20}
+.nav .in{justify-content:space-between}
+.prog{height:3px; background:var(--red); width:0; transition:width .2s}
+.navbtn{border:1px solid var(--line); background:var(--panel); color:var(--ink); border-radius:10px; padding:9px 18px; font:inherit; font-weight:700; cursor:pointer}
+.navbtn.next{background:var(--ink); color:var(--bg); border-color:var(--ink)}
+.navbtn:disabled{opacity:.35; cursor:not-allowed}
+#where{font-size:.82rem; color:var(--ink-3); text-align:center}
+@media (max-width:700px){ .brand{display:none} .card{padding:18px 15px; border-radius:14px} main{padding:14px 10px 0} }
+</style>
+</head>
+<body>
+<div class="top"><div class="in">
+  <div class="brand">INE 315 · <span>Week 9</span></div>
+  <nav class="chips" id="chips" aria-label="Sections"></nav>
+  <div class="tools">
+    <span class="timer" id="timer" title="Click to pause, double-click to stop"></span>
+    <button class="tbtn" id="themeBtn" title="Colour theme">Theme</button>
+  </div>
+</div><div class="prog" id="prog"></div></div>
+
+<main><div id="stage"></div></main>
+
+<div class="nav"><div class="in">
+  <button class="navbtn" id="prevBtn">&larr; Back</button>
+  <div id="where"></div>
+  <button class="navbtn next" id="nextBtn">Next &rarr;</button>
+</div></div>
+
+<script>const DATA = {"week": {"n": 9, "label": "Week 9", "brand": "Week 9", "title": "Data that travels, and a function you never call", "sub": "Two sessions: a reading as a dictionary, then the code that receives it", "lead": "Last week you sent a <b>sentence<\/b>. Fine for a person, useless to a program. This week one message carries <b>three values with names on them<\/b>, and you write the code at the other end that takes them out again. <b>Dictionaries, strings and functions are the content;<\/b> the broker is still given.", "lesson_label": "Why:"}, "sessions": {"1": {"title": "A reading is a dictionary, not a sentence", "goal": "Put several values in one dictionary, turn it into text with <code>json.dumps<\/code>, and say what <b>type<\/b> you are holding at each step.", "two": ["one reading is one <b>dictionary<\/b>", "<code>json.dumps<\/code> turns it into a <b>string<\/b> that can travel"], "recap": "Last week: a topic is a string, and <code>client.publish(topic, text)<\/code> sends text and gives nothing back. All of that stays exactly the same today.", "demos": ["Demo 3: one reading, built and sent", "Demo 4: the telemetry loop, three readings"], "notebooks": ["demo3_telemetry_publisher.ipynb"]}, "2": {"title": "Receiving: a function you write but never call", "goal": "Write a <b>callback<\/b>, turn the bytes that arrive back into a dictionary, and decide something with it.", "two": ["a <b>callback<\/b> is a function you hand over, with no brackets", "<code>.decode()<\/code> then <code>json.loads<\/code> gets your dictionary back"], "recap": "Last session: <code>json.dumps<\/code> turned a dictionary into a string, and <code>publish<\/code> sent it. Today we stand at the other end of the same pipe.", "demos": ["Demo 5: the eighteen-line subscriber", "Demo 6: readings arriving, one decision each"], "notebooks": ["demo4_subscriber_callback.ipynb"]}}, "exercises": {"demo3_telemetry_publisher.ipynb": [{"id": "3.1", "kind": "Fill in", "title": "Build one reading", "task": "Build <code>reading<\/code> as a dictionary with three keys: <code>\"machine\"<\/code> (the text <code>\"M3\"<\/code>), <code>\"temp_c\"<\/code> (the number 91.4) and <code>\"ok\"<\/code> (<code>True<\/code>).", "star": false}, {"id": "3.2", "kind": "Fill in", "title": "Turn it into text and send it", "task": "Turn <code>reading<\/code> into a string with <code>json.dumps<\/code>, publish it to <code>TOPIC<\/code>, and print what you sent.", "star": false}, {"id": "3.3", "kind": "Predict", "title": "Which is which type?", "task": "<b>Predict first:<\/b> what does <code>type(reading)<\/code> say, and what does <code>type(payload)<\/code> say? Write both answers as text, then run.", "star": false}, {"id": "3.4", "kind": "Write it", "title": "A telemetry loop", "task": "Publish <b>three<\/b> readings in a loop. Each one has a new random temperature, rounded to one decimal, and a fourth key <code>\"humidity_pct\"<\/code> set to 45.", "star": false}, {"id": "3.5", "kind": "Write it", "title": "One reading per machine", "task": "Three machines, one message each, <b>to its own topic<\/b>: <code>ine315/&lt;your name>/&lt;machine>/telemetry<\/code>. The machine name goes in the dictionary as well.", "star": true}], "demo4_subscriber_callback.ipynb": [{"id": "4.1", "kind": "Fill in", "title": "Unpack what arrived", "task": "Complete <code>on_message<\/code> so it turns the bytes back into a dictionary and prints the machine and its temperature.", "star": false}, {"id": "4.2", "kind": "Fill in", "title": "Decide when it arrives", "task": "Add the rule: print <code>ALARM<\/code> with the machine and temperature when the temperature is above 90, and <code>ok<\/code> otherwise.", "star": false}, {"id": "4.3", "kind": "Predict", "title": "What arrives, exactly?", "task": "<b>Predict first:<\/b> what type is <code>msg.payload<\/code> before you decode it? Write your answer as text, then run.", "star": false}, {"id": "4.4", "kind": "Fix it", "title": "One pair of brackets", "task": "This line is wrong and the callback will never run. <b>Fix it<\/b>, then check that the client is holding the function itself.", "star": false}, {"id": "4.5", "kind": "Write it", "title": "Count the alarms", "task": "Count how many alarms have arrived so far. The counter must survive between calls, so it <b>cannot<\/b> be an ordinary variable inside the callback.", "star": true}]}, "blocks": [{"session": 1, "id": "C1", "short": "Warm-up", "title": "Warm-up: dictionaries", "cards": [{"kind": "idea", "tag": "PYTHON", "title": "A dictionary stores values with names on them", "points": ["A list stores values <b>in order<\/b>: you get them back by position, <code>x[0]<\/code>.", "A dictionary stores values <b>by name<\/b>: you get them back by key, <code>x[\"temp_c\"]<\/code>.", "<b>The keys are strings<\/b>, in quotes. Forget the quotes and Python looks for a variable of that name.", "You can add a key that was not there when the dictionary was built. Lists cannot do that."], "code": "prices = {\"P100\": 12.5, \"P200\": 30.0}\n\nprint(prices[\"P100\"])        # 12.5\nprices[\"P300\"] = 7.25       # a new key\nprint(prices)"}, {"kind": "predict", "question": "Reading one value back out. What prints?", "code": "reading = {\"machine\": \"M3\", \"temp_c\": 91.4, \"ok\": True}\n\nprint(reading[\"temp_c\"])", "options": ["an error", "91.4", "temp_c", "2"], "explain": "The key names the value you want, and the square brackets fetch it. <b>The key is a string<\/b>, so it needs its quotes: <code>reading[temp_c]<\/code> without them is a <code>NameError<\/code>.", "answer": 1, "output": "91.4"}, {"kind": "predict", "question": "Now a key that was never there. What prints?", "code": "reading = {\"machine\": \"M3\", \"temp_c\": 91.4}\nreading[\"ok\"] = True\n\nprint(reading)", "options": ["an error", "{'machine': 'M3', 'temp_c': 91.4, 'ok': True}", "{'machine': 'M3', 'temp_c': 91.4}", "{'ok': True}"], "explain": "<b>Assigning to a key that does not exist creates it.<\/b> That is how a reading grows a fourth field later without breaking anything that was already written.", "answer": 1, "output": "{'machine': 'M3', 'temp_c': 91.4, 'ok': True}"}, {"kind": "classify", "title": "Does this line work?", "bins": ["gets a value out", "puts a value in", "raises an error"], "task": "The dictionary is <code>reading = {\"machine\": \"M3\", \"temp_c\": 91.4}<\/code>. Decide what each line does.", "items": ["print(reading[\"machine\"])", "reading[\"ok\"] = True", "print(reading[\"Temp_c\"])", "reading[\"temp_c\"] = 92.0", "print(reading[0])", "print(reading[\"temp_c\"])"], "after": "<b>Keys are case-sensitive strings<\/b>, so <code>\"Temp_c\"<\/code> is a different key and Python raises a <code>KeyError<\/code>. And a dictionary has no positions, so <code>reading[0]<\/code> asks for a key called <code>0<\/code>, which is not there either. <b>Reading a missing key is an error; writing one is how you add it.<\/b>", "answers": [0, 1, 2, 1, 2, 0]}]}, {"session": 1, "id": "C2", "short": "One reading", "title": "One reading, and how it travels", "cards": [{"kind": "idea", "tag": "IDEA", "title": "Why a dictionary and not three variables", "points": ["It travels as <b>one thing<\/b>. Three variables would be three messages, and they could arrive in any order.", "It is <b>self-describing<\/b>: the receiver sees <code>\"temp_c\"<\/code>, not just a number it has to guess about.", "It can <b>grow<\/b>. Add humidity next week and every receiver that does not care still works.", "<b>The keys are a contract.<\/b> Change a key name and every receiver breaks, which is why teams write the key names down before anyone writes code."], "code": "reading = {\n    \"machine\": \"M3\",\n    \"temp_c\": 91.4,\n    \"ok\": True,\n}\n\nprint(reading)\nprint(reading[\"temp_c\"])"}, {"kind": "demo", "title": "Demo 3: from dictionary to text", "code": "import json\n\nreading = {\"machine\": \"M3\", \"temp_c\": 91.4, \"ok\": True}\n\npayload = json.dumps(reading)\nprint(payload)\n\nprint(type(reading))\nprint(type(payload))", "points": ["<code>json.dumps<\/code> gives back a <b>string<\/b> that looks like the dictionary. Look at the quotes in the printed line.", "<b>Python's <code>True<\/code> came out as <code>true<\/code><\/b>, in lower case. JSON is its own format, not Python source.", "<code>dumps<\/code> means <i>dump to string<\/i>. The <code>s<\/code> on the end is the whole mnemonic.", "<b>Nothing was sent yet.<\/b> This step only changes what you are holding."], "output": "{\"machine\": \"M3\", \"temp_c\": 91.4, \"ok\": true}\n<class 'dict'>\n<class 'str'>"}, {"kind": "predict", "question": "Booleans in JSON. What exactly does this print?", "code": "import json\n\nprint(json.dumps({\"ok\": True, \"n\": 3}))", "options": ["an error", "{\"ok\": true, \"n\": 3}", "{'ok': True, 'n': 3}", "{\"ok\": True, \"n\": 3}"], "explain": "Two differences from Python: <b>double quotes<\/b> around the key, and <b>lower-case <code>true<\/code><\/b>. JSON is read by programs written in many languages, so it has its own spelling.", "answer": 1, "output": "{\"ok\": true, \"n\": 3}"}, {"kind": "live", "mode": "types", "title": "The round trip, one step at a time", "tasks": ["Walk it forwards. At which step does it stop being a dictionary?", "Which two steps do you write, and which two happen inside the library?", "At the far end, what would happen if the receiver skipped <code>json.loads<\/code>?"]}, {"kind": "error", "code": "import json\n\nreading = {\"machine\": \"M3\", \"readings\": {1, 2, 3}}\nprint(json.dumps(reading))", "cause": "<b>Not everything can be written as JSON.<\/b> Text, numbers, <code>True<\/code>/<code>False<\/code>, lists and dictionaries can; a set cannot. The fix is to send a list instead: <code>[1, 2, 3]<\/code>. <b>Read the message: it names the type it could not handle.<\/b>", "etype": "TypeError", "msg": "Object of type set is not JSON serializable", "line": 4}]}, {"session": 1, "id": "C3", "short": "The loop", "title": "The telemetry loop", "cards": [{"kind": "demo", "title": "Demo 4: five steps, repeated", "code": "import json, random, time\n\nMY_NAME = \"ahmed\"\nTOPIC   = f\"ine315/{MY_NAME}/telemetry\"\n\nfor i in range(3):\n    reading = {                                  # 1. a dictionary\n        \"machine\": \"M3\",\n        \"temp_c\": round(random.uniform(80, 95), 1),\n        \"ok\": True,\n    }\n    payload = json.dumps(reading)                # 2. dict -> str\n    client.publish(TOPIC, payload)               # 3. send it\n    print(\"sent:\", payload)                      # 4. see it\n    time.sleep(2.0)                              # 5. wait", "points": ["<b>Build, convert, send, show, wait.<\/b> The same five steps every industrial telemetry program has.", "The reading is built <b>inside<\/b> the loop, so every message is a new one.", "<code>round(..., 1)<\/code> keeps one decimal. Without it you send fifteen meaningless digits.", "<b>Only line 3 of the five touches the network.<\/b> The rest is ordinary Python you already write.", "<b>Your numbers will not match mine:<\/b> <code>random.uniform<\/code> gives a different temperature every run."], "output": "sent: {\"machine\": \"M3\", \"temp_c\": 92.7, \"ok\": true}\nsent: {\"machine\": \"M3\", \"temp_c\": 91.4, \"ok\": true}\nsent: {\"machine\": \"M3\", \"temp_c\": 86.3, \"ok\": true}"}, {"kind": "bug", "title": "Every message says the same thing", "code": "import json, random, time\n\nreading = {                                  # built ONCE, outside the loop\n    \"machine\": \"M3\",\n    \"temp_c\": round(random.uniform(80, 95), 1),\n    \"ok\": True,\n}\n\nfor i in range(3):\n    payload = json.dumps(reading)\n    client.publish(TOPIC, payload)\n    print(\"sent:\", payload)", "line": 3, "cause": "<b>The dictionary was built once, outside the loop.<\/b> The loop then sends the same reading three times, with no error and nothing to see at this end. Anyone reading the data downstream believes the machine sat at exactly one temperature. <b>Build it where it changes: inside the loop.<\/b>", "expected": "sent: {\"machine\": \"M3\", \"temp_c\": 92.7, \"ok\": true}\nsent: {\"machine\": \"M3\", \"temp_c\": 91.4, \"ok\": true}\nsent: {\"machine\": \"M3\", \"temp_c\": 86.3, \"ok\": true}", "got": "sent: {\"machine\": \"M3\", \"temp_c\": 92.7, \"ok\": true}\nsent: {\"machine\": \"M3\", \"temp_c\": 92.7, \"ok\": true}\nsent: {\"machine\": \"M3\", \"temp_c\": 92.7, \"ok\": true}"}, {"kind": "live", "mode": "dictbuild", "title": "Build a reading and watch the message", "tasks": ["Change the temperature. Which characters in the JSON change?", "Tick <b>humidity<\/b>. Does the old receiver, which only reads <code>temp_c<\/code>, still work?", "Set the machine name to <code>M 3<\/code> with a space. Is that still valid JSON? Is it a good idea?"]}, {"kind": "yourturn", "minutes": 15, "notebook": "demo3_telemetry_publisher.ipynb", "sub": "In Colab, in <code>demo3_telemetry_publisher.ipynb<\/code>. Your name goes in <code>MY_NAME<\/code> first, as last week.", "chat": "When you see <b>PASS<\/b>, type <b>done<\/b> in the chat. Your readings should appear on the projector as JSON."}, {"kind": "table", "title": "What is examinable from Session 1", "rows": [["Building a dictionary, reading and adding keys", "MQTT brokers and cloud platforms"], ["<code>KeyError<\/code>: what it means and how to read it", "Time-series databases and dashboards"], ["<code>json.dumps<\/code>, and that it returns a <b>string<\/b>", "The JSON standard itself"], ["Saying the <b>type<\/b> at each step of the trip", "Which fields a real plant would send"], ["Building the dictionary inside the loop", "Sampling rates and network cost"], ["Rounding before you send", ""]], "note": "<b>Next session:<\/b> the same pipe, read from the other end. Two new things again — a <b>callback<\/b>, and <code>json.loads<\/code>."}]}, {"session": 2, "id": "D1", "short": "Callbacks", "title": "A function you write but never call", "cards": [{"kind": "idea", "tag": "IDEA", "title": "You cannot write “wait here until a message comes”", "points": ["Everything you have written so far ran when <b>you<\/b> decided: line after line, top to bottom.", "A message can arrive <b>at any time<\/b>, including while your program is doing something else.", "So you <b>hand the library a function<\/b> and say: run this whenever something arrives. That function is a <b>callback<\/b>.", "<b>You never call it yourself.<\/b> You write it, you hand it over, and the library calls it — possibly hundreds of times."], "code": "def on_message(client, userdata, msg):\n    print(\"got:\", msg.payload)\n\nclient.on_message = on_message      # no brackets!"}, {"kind": "predict", "question": "With brackets and without. What are these two things?", "code": "def alarm_line():\n    return \"ALARM\"\n\nprint(type(alarm_line))\nprint(type(alarm_line()))", "options": ["an error", "<class 'function'>\n<class 'str'>", "<class 'str'>\n<class 'str'>", "<class 'function'>\n<class 'function'>"], "explain": "<b><code>alarm_line<\/code> is the function itself. <code>alarm_line()<\/code> is what you get when you run it.<\/b> Handing a library the second one is the single most common callback mistake: it runs the function immediately, and gives the library its result.", "answer": 1, "output": "<class 'function'>\n<class 'str'>"}, {"kind": "error", "code": "def on_message(client, userdata, msg):\n    print(\"got:\", msg.payload)\n\nhandler = on_message()", "cause": "<b>The brackets called it now<\/b>, with no client, no userdata and no message to work on, so Python complains that three arguments are missing. Write <code>handler = on_message<\/code>: hand over the function and let the library supply the three values later.", "etype": "TypeError", "msg": "on_message() missing 3 required positional arguments: 'client', 'userdata', and 'msg'", "line": 4}, {"kind": "idea", "tag": "GIVEN", "title": "Three parameters you never supply yourself", "points": ["<code>client<\/code> — the connection object, in case you want to reply. Usually ignored.", "<code>userdata<\/code> — anything extra you set up earlier. Usually ignored.", "<code>msg<\/code> — <b>the message<\/b>: <code>msg.topic<\/code> is a string, <code>msg.payload<\/code> is bytes.", "<b>You must accept all three, in that order, whether you use them or not<\/b> — because the library will pass all three."], "fhead": ["what you write", "who fills it in"], "formulas": [["def on_message(client, userdata, msg):", "the library, every time"], ["msg.topic", "the topic the message arrived on"], ["msg.payload", "the raw bytes that were sent"], ["client.on_message = on_message", "you, once, before connecting"]]}]}, {"session": 2, "id": "D2", "short": "Unpack it", "title": "Getting your dictionary back", "cards": [{"kind": "idea", "tag": "PYTHON", "title": "Bytes, then text, then a dictionary", "points": ["<code>msg.payload<\/code> arrives as <b>bytes<\/b>: <code>b'{\"machine\": \"M3\"}'<\/code>. The <code>b<\/code> is the clue.", "<code>.decode()<\/code> turns bytes into a <b>string<\/b>.", "<code>json.loads<\/code> turns that string into a <b>dictionary<\/b>. <i>loads<\/i> = load from string.", "<b>Only then<\/b> can you write <code>reading[\"temp_c\"]<\/code>."], "code": "text    = msg.payload.decode()      # bytes -> str\nreading = json.loads(text)          # str   -> dict\n\nprint(reading[\"machine\"], reading[\"temp_c\"])"}, {"kind": "error", "code": "text = '{\"machine\": \"M3\", \"temp_c\": 91.4}'\n\nprint(text[\"machine\"])", "cause": "<b><code>json.loads<\/code> was skipped.<\/b> <code>text<\/code> is still a string, and strings are indexed by <b>position<\/b>: <code>text[0]<\/code> is a character. Python is telling you it wanted a number where you gave it a key. <b>Turn it into a dictionary first.<\/b>", "etype": "TypeError", "msg": "string indices must be integers, not 'str'", "line": 3}, {"kind": "trace", "title": "Step through the callback when a message arrives", "code": "import json\n\ndef on_message(client, userdata, msg):\n    text    = msg.payload.decode()\n    reading = json.loads(text)\n    if reading[\"temp_c\"] > 90:\n        print(\"ALARM\", reading[\"machine\"], reading[\"temp_c\"])\n    else:\n        print(\"ok   \", reading[\"machine\"], reading[\"temp_c\"])\n\n# the library does this when a message lands:\ndeliver(\"ine315/ahmed/telemetry\", '{\"machine\": \"M3\", \"temp_c\": 91.4, \"ok\": true}')", "steps": [{"line": 1, "kind": "line", "note": "", "g": {}, "fn": null, "loc": null, "out": ""}, {"line": 3, "kind": "line", "note": "def only DEFINES the function. Nothing has arrived yet.", "g": {"on_message": "function"}, "fn": null, "loc": null, "out": ""}, {"line": 12, "kind": "line", "note": "A message lands. <b>The library calls your function<\/b> and fills in the three parameters.", "g": {"on_message": "function"}, "fn": "on_message", "loc": {"client": "<__main__._C object at 0x7f1e7279d950>", "userdata": "None", "msg": "<__main__._Msg object at 0x7f1e7279e650>"}, "out": ""}, {"line": 4, "kind": "line", "note": "msg.payload is bytes; decode gives text: {\"machine\": \"M3\", \"temp_c\": 91.4, \"ok\": true}.", "g": {"on_message": "function"}, "fn": "on_message", "loc": {"client": "<__main__._C object at 0x7f1e7279d950>", "userdata": "None", "msg": "<__main__._Msg object at 0x7f1e7279e650>", "text": "'{\"machine\": \"M3\", \"temp_c\": 91.4, \"ok\": true}'"}, "out": ""}, {"line": 5, "kind": "line", "note": "json.loads turns that text into a dictionary: {'machine': 'M3', 'temp_c': 91.4, 'ok': True}.", "g": {"on_message": "function"}, "fn": "on_message", "loc": {"client": "<__main__._C object at 0x7f1e7279d950>", "userdata": "None", "msg": "<__main__._Msg object at 0x7f1e7279e650>", "text": "'{\"machine\": \"M3\", \"temp_c\": 91.4, \"ok\": true}'", "reading": "{'machine': 'M3', 'temp_c': 91.4, 'ok': True}"}, "out": ""}, {"line": 6, "kind": "line", "note": "Is 91.4 greater than 90? <b>True<\/b>.", "g": {"on_message": "function"}, "fn": "on_message", "loc": {"client": "<__main__._C object at 0x7f1e7279d950>", "userdata": "None", "msg": "<__main__._Msg object at 0x7f1e7279e650>", "text": "'{\"machine\": \"M3\", \"temp_c\": 91.4, \"ok\": true}'", "reading": "{'machine': 'M3', 'temp_c': 91.4, 'ok': True}"}, "out": ""}, {"line": 7, "kind": "line", "note": "So this line runs. The callback then finishes and the program goes back to waiting.", "g": {"on_message": "function"}, "fn": "on_message", "loc": {"client": "<__main__._C object at 0x7f1e7279d950>", "userdata": "None", "msg": "<__main__._Msg object at 0x7f1e7279e650>", "text": "'{\"machine\": \"M3\", \"temp_c\": 91.4, \"ok\": true}'", "reading": "{'machine': 'M3', 'temp_c': 91.4, 'ok': True}"}, "out": "ALARM M3 91.4\n"}, {"line": 7, "kind": "return", "note": "on_message() is finished. Back to the line that called it.", "g": {"on_message": "function"}, "fn": null, "loc": null, "out": "ALARM M3 91.4\n"}, {"line": null, "kind": "end", "note": "Finished. The output box shows exactly what Python printed.", "g": {"on_message": "function"}, "fn": null, "loc": null, "out": "ALARM M3 91.4\n"}]}, {"kind": "demo", "title": "Demo 5: the whole subscriber, eighteen lines", "code": "import json\nimport paho.mqtt.client as mqtt\n\nMY_NAME = \"ahmed\"                            # <-- the same name as the publisher\nTOPIC   = f\"ine315/{MY_NAME}/telemetry\"\n\ndef on_message(client, userdata, msg):       # YOU write this\n    text    = msg.payload.decode()           # bytes -> str\n    reading = json.loads(text)               # str   -> dict\n\n    if reading[\"temp_c\"] > 90:\n        print(\"ALARM\", reading[\"machine\"], reading[\"temp_c\"])\n    else:\n        print(\"ok   \", reading[\"machine\"], reading[\"temp_c\"])\n\nclient = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)\nclient.on_message = on_message               # no brackets\nclient.connect(\"test.mosquitto.org\", 1883, 60)\nclient.subscribe(TOPIC)\nclient.loop_forever()                        # wait for messages", "run": false, "hint": "Run it and it prints nothing, then waits. It only wakes up when a message arrives on your topic — so start your publisher in a second window.", "points": ["<b>Three things happen before the waiting starts:<\/b> you build the client, you hand over the callback, you subscribe.", "<code>client.on_message = on_message<\/code> — <b>no brackets.<\/b>", "<code>loop_forever()<\/code> is the line that waits. Without it the program ends immediately and hears nothing.", "<b>The decision inside is last week's <code>if<\/code>/<code>else<\/code><\/b>, made about data that came from another computer."]}, {"kind": "puzzle", "task": "The callback's body, and the one line that hands it over. <b>Which lines belong inside the function, and which inside the <code>if<\/code>?<\/b>", "lines": ["def on_message(client, userdata, msg):", "text    = msg.payload.decode()", "reading = json.loads(text)", "if reading[\"temp_c\"] > 90:", "print(\"ALARM\", reading[\"machine\"])", "else:", "print(\"ok   \", reading[\"machine\"])", "client.on_message = on_message"], "levels": [0, 1, 1, 1, 2, 1, 2, 0]}, {"kind": "live", "mode": "callback", "title": "Watch the callback fire", "tasks": ["Press <b>send a reading<\/b> a few times. What runs each time, and what does not?", "Move the alarm limit to 85. How many of the same readings are alarms now?", "Turn on <b>the sender's stream<\/b>. Your program is not looping — so why does it keep printing?"]}, {"kind": "classify", "title": "When does each line run?", "bins": ["once, at the start", "every time a message arrives", "never on its own"], "task": "Six lines from the subscriber. Decide when each one runs.", "items": ["client.subscribe(TOPIC)", "reading = json.loads(text)", "def on_message(client, userdata, msg):", "client.on_message = on_message", "print(\"ALARM\", ...)", "client.loop_forever()"], "after": "<b>The <code>def<\/code> line never runs on its own<\/b> — it only creates the function. The two <code>client.<\/code> setup lines run once, before any waiting. Everything <b>inside<\/b> the callback runs once per message, which may be never, or may be thousands of times.", "answers": [0, 1, 2, 0, 1, 0]}]}, {"session": 2, "id": "D3", "short": "Your turn", "title": "Your turn, and where this goes next", "cards": [{"kind": "error", "code": "import json\n\ntext    = '{\"machine\": \"M3\", \"temperature\": 91.4}'\nreading = json.loads(text)\n\nprint(reading[\"temp_c\"])", "cause": "<b>The sender used a different key name.<\/b> <code>\"temperature\"<\/code> arrived, <code>\"temp_c\"<\/code> was asked for, and Python names the key it could not find. Nothing is wrong with the message or the code on its own: <b>the two ends disagreed about the contract.<\/b> This is why the keys are agreed before anyone writes code.", "etype": "KeyError", "msg": "'temp_c'", "line": 6}, {"kind": "yourturn", "minutes": 15, "notebook": "demo4_subscriber_callback.ipynb", "sub": "In Colab, in <code>demo4_subscriber_callback.ipynb<\/code>. The notebook gives you <code>deliver(...)<\/code>, which hands a message to your callback exactly as the library would — so every exercise works even with no network.", "chat": "Pair up: one of you publishes from last session's notebook, the other subscribes. Then swap."}, {"kind": "table", "title": "What is examinable from Session 2", "rows": [["Writing a function that <b>something else<\/b> will call", "MQTT internals and QoS levels"], ["Passing a function <b>without<\/b> brackets", "Threading and event loops"], ["<code>.decode()<\/code> on bytes, and why", "Character encodings beyond UTF-8"], ["<code>json.loads<\/code>, and the type at each step", "Message brokers and their guarantees"], ["Reading a <code>KeyError<\/code> and a <code>TypeError<\/code>", "Security and authentication"], ["A variable outside the callback that survives between calls", ""]], "note": "<b>Next week:<\/b> the numbers stop being random. A sensor in the browser produces them, and one line of your program changes."}]}], "summary": [["reading = {\"machine\": \"M3\", ...}", "one reading, several values with names on them"], ["reading[\"temp_c\"]", "gets one value out; a missing key is a KeyError"], ["reading[\"ok\"] = True", "adds a key that was not there before"], ["json.dumps(reading)", "dictionary  ->  string, so it can travel"], ["msg.payload.decode()", "bytes  ->  string, at the other end"], ["json.loads(text)", "string  ->  dictionary, so you can index it"], ["def on_message(client, userdata, msg):", "the callback: you write it, the library calls it"], ["client.on_message = on_message", "hand over the function itself, with no brackets"]], "summary_title": "Week 9: everything you wrote", "summary_heads": ["the line", "what it does"], "summary_note": "<b>Two new ideas each session, and six of these eight lines are ordinary Python.<\/b> If you can say what type you are holding at every step of the round trip, and why the callback has no brackets, you have Week 9. <b>To revise:<\/b> run the two notebooks again and make the publisher and the subscriber talk to each other."};</script>
+<script>const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+function store(k,v){ try{ if(v===undefined) return localStorage.getItem(k); localStorage.setItem(k,v);}catch(e){ return null; } }
+const NS="http://www.w3.org/2000/svg";
+function el(tag,attrs,parent){ const e=document.createElementNS(NS,tag); for(const k in attrs) e.setAttribute(k,attrs[k]); if(parent) parent.appendChild(e); return e; }
+
+/* ---------------- theme ---------------- */
+(function(){
+  const root=document.documentElement, b=$("#themeBtn"), modes=["auto","light","dark"];
+  let m=store("ine315-w9-theme")||"auto";
+  const apply=()=>{ if(m==="auto") root.removeAttribute("data-theme"); else root.setAttribute("data-theme",m); b.textContent="Theme: "+m; };
+  apply(); b.onclick=()=>{ m=modes[(modes.indexOf(m)+1)%3]; store("ine315-w9-theme",m); apply(); };
+})();
+
+/* ---------------- Python highlighter ---------------- */
+const KW=new Set("def class return if elif else for in while and or not True False None import from as pass break continue try except print".split(" "));
+const BI=new Set("len range min max sum int float str list dict type enumerate sorted round abs all any zip bool".split(" "));
+function hl(line){
+  let out=""; const re=/(#.*$)|(f?"(?:[^"\\]|\\.)*"|f?'(?:[^'\\]|\\.)*')|(\b\d+(?:\.\d+)?\b)|([A-Za-z_]\w*)|(\s+)|(.)/g; let m;
+  while((m=re.exec(line))){
+    if(m[1]) out+=`<span class="tk-com">${esc(m[1])}</span>`;
+    else if(m[2]) out+=`<span class="tk-str">${esc(m[2])}</span>`;
+    else if(m[3]) out+=`<span class="tk-num">${m[3]}</span>`;
+    else if(m[4]){ const w=m[4]; out+= KW.has(w)?`<span class="tk-kw">${w}</span>`: BI.has(w)?`<span class="tk-fn">${w}</span>`: w; }
+    else out+=esc(m[0]);
+  }
+  return out;
+}
+function codeHTML(src,opts={}){
+  return `<pre class="code ${opts.big?"big":""}">`+src.split("\n").map((l,i)=>
+    `<span class="ln ${opts.click?"click":""}" data-l="${i+1}"><span class="no">${i+1}</span>${hl(l)||" "}</span>`).join("")+`</pre>`;
+}
+
+/* ---------------- timer ---------------- */
+const TIMER={left:0,id:null,paused:false};
+function startTimer(min){ const t=$("#timer"); TIMER.left=min*60; TIMER.paused=false; t.classList.add("on"); t.classList.remove("up"); clearInterval(TIMER.id); tick();
+  TIMER.id=setInterval(()=>{ if(TIMER.paused) return; TIMER.left--; tick(); if(TIMER.left<=0){ clearInterval(TIMER.id); t.textContent="Time!"; t.classList.add("up"); } },1000); }
+function tick(){ const m=Math.floor(TIMER.left/60), s=TIMER.left%60; $("#timer").textContent=`${m}:${String(s).padStart(2,"0")}${TIMER.paused?" ||":""}`; }
+$("#timer").onclick=()=>{ if(TIMER.left>0){ TIMER.paused=!TIMER.paused; tick(); } };
+$("#timer").ondblclick=()=>{ clearInterval(TIMER.id); $("#timer").classList.remove("on","up"); };
+
+/* ---------------- diagrams ---------------- */
+const DIAG={
+  loop:()=>{
+    const W=640,H=150;
+    let s=`<svg class="dg" viewBox="0 0 ${W} ${H}"><defs><marker id="ah" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="var(--ink-3)"/></marker></defs>`;
+    const boxes=[["Read","buttons, sensors, messages",20,"b2"],["Decide","if / elif",180,"acc"],["Write","motor, lamp, message",340,"b2"],["Wait","time.sleep",500,""]];
+    boxes.forEach(([t,sub,x,cls])=>{
+      s+=`<rect class="bx ${cls}" x="${x}" y="40" width="120" height="52" rx="12"/>`+
+         `<text class="tx" x="${x+60}" y="63" text-anchor="middle">${t}</text>`+
+         `<text class="sm" x="${x+60}" y="81" text-anchor="middle">${sub}</text>`;
+    });
+    [[140,180],[300,340],[460,500]].forEach(([a,b])=>{ s+=`<path class="ar" d="M${a},66 L${b-6},66"/>`; });
+    s+=`<path class="ar" d="M560,92 L560,120 L80,120 L80,92"/><text class="sm" x="320" y="136" text-anchor="middle">and again, forever</text></svg>`;
+    return s;
+  },
+  net:()=>{
+    const W=640,H=190;
+    let s=`<svg class="dg" viewBox="0 0 ${W} ${H}"><defs><marker id="ah2" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="var(--ink-3)"/></marker></defs>`;
+    s+=`<rect class="bx acc" x="10" y="70" width="150" height="56" rx="12"/><text class="tx" x="85" y="94" text-anchor="middle">your laptop</text><text class="sm" x="85" y="112" text-anchor="middle">client.publish(...)</text>`;
+    s+=`<rect class="bx" x="240" y="70" width="160" height="56" rx="12"/><text class="tx" x="320" y="94" text-anchor="middle">the broker</text><text class="sm" x="320" y="112" text-anchor="middle">test.mosquitto.org</text>`;
+    s+=`<rect class="bx b2" x="470" y="14" width="160" height="50" rx="12"/><text class="tx" x="550" y="35" text-anchor="middle">the projector</text><text class="sm" x="550" y="52" text-anchor="middle">subscribed</text>`;
+    s+=`<rect class="bx b2" x="470" y="78" width="160" height="50" rx="12"/><text class="tx" x="550" y="99" text-anchor="middle">a dashboard</text><text class="sm" x="550" y="116" text-anchor="middle">subscribed</text>`;
+    s+=`<rect class="bx b2" x="470" y="142" width="160" height="40" rx="12"/><text class="tx" x="550" y="167" text-anchor="middle">a database</text>`;
+    s+=`<path class="ar" style="marker-end:url(#ah2)" d="M160,98 L234,98"/><text class="sm" x="197" y="88" text-anchor="middle">topic + text</text>`;
+    [39,103,162].forEach(y=>{ s+=`<path class="ar" style="marker-end:url(#ah2)" d="M400,98 C435,98 435,${y} 464,${y}"/>`; });
+    s+=`</svg>`;
+    return s;
+  }
+};
+
+/* ---------------- card list ---------------- */
+const CARDS=[];
+const LABEL={idea:"The idea",predict:"Predict",trace:"Step through",puzzle:"Fix the indentation",demo:"Watch me type",bug:"Find the bug",
+  error:"Read the error",live:"Play with it",classify:"Sort them",yourturn:"Your turn",table:"Reference"};
+const PILL={welcome:["WEEK 9","gray"],session:["SESSION","gray"],idea:["IDEA",""],predict:["PREDICT","blue"],trace:["STEP THROUGH","blue"],
+  puzzle:["FIX THE INDENT","blue"],classify:["SORT THEM","blue"],demo:["WATCH ME TYPE","gray"],bug:["FIND THE BUG","blue"],
+  error:["READ THE ERROR","blue"],live:["PLAY WITH IT","blue"],yourturn:["YOUR TURN · COLAB","green"],table:["REFERENCE","gray"],summary:["SUMMARY","gray"]};
+CARDS.push({type:"welcome",block:null,session:0,label:"Week 8"});
+[1,2].forEach(s=>{
+  CARDS.push({type:"session",block:null,session:s,label:`Session ${s} starts`});
+  DATA.blocks.filter(b=>b.session===s).forEach(b=>b.cards.forEach(c=>CARDS.push({type:c.kind,block:b,session:s,c,label:LABEL[c.kind]})));
+});
+CARDS.push({type:"summary",block:null,session:2,label:"Week 8 summary"});
+
+let cur=0, ctl=null;
+function head(card,title,sub){
+  const [p,col]=PILL[card.type], b=card.block;
+  return `<div class="ctype"><span class="pill ${col}">${p}</span>${b?`Session ${b.session} · ${esc(b.title)}`:""}</div>`+
+    (title?`<h2>${title}</h2>`:"")+(sub?`<p class="lead">${sub}</p>`:"");
+}
+
+/* ---------------- renderers ---------------- */
+const R={};
+R.welcome=(e)=>{
+  const W=DATA.week, S=DATA.sessions;
+  e.innerHTML=`<div class="ctype"><span class="pill gray">WEEK ${W.n}</span>INE 315 · Programming Applications for IE</div>
+  <h1>${W.title}</h1><p class="lead">${W.lead}</p>
+  <div class="two">
+    <div class="recap"><span class="banner">Session 1</span><h3>${S[1].title}</h3><p style="margin:4px 0 0">${S[1].goal}</p></div>
+    <div class="recap"><span class="banner s2">Session 2</span><h3>${S[2].title}</h3><p style="margin:4px 0 0">${S[2].goal}</p></div>
+  </div>
+  <div class="rhythm">
+    <div class="rh"><div class="k">1</div><div class="t">Idea</div><div class="d">One idea; rules are given.</div></div>
+    <div class="rh"><div class="k">2</div><div class="t">Predict</div><div class="d">Guess the output. A–D out loud.</div></div>
+    <div class="rh"><div class="k">3</div><div class="t">Watch</div><div class="d">A short demo, then play with it.</div></div>
+    <div class="rh"><div class="k">4</div><div class="t">You do</div><div class="d">Exercises in Colab, with a checker.</div></div>
+    <div class="rh"><div class="k">5</div><div class="t">Check</div><div class="d">Answers, and the usual mistake.</div></div>
+  </div>
+  <p class="hint">Use <kbd>&rarr;</kbd> and <kbd>&larr;</kbd> to move. On a card with steps, <kbd>&rarr;</kbd> first reveals the next step. The chips at the top jump to any part.</p>`;
+};
+R.session=(e,card)=>{
+  const s=card.session, S=DATA.sessions[s];
+  e.classList.add("session");
+  e.innerHTML=`<div><span class="banner ${s===2?"s2":""}">Session ${s} starts here</span>
+    <h1>${S.title}</h1><p class="lead">${S.goal}</p>
+    <div class="recap">${S.recap}</div>
+    <div class="two"><div><h3>Only two new things today</h3><div class="demolist">${S.two.map((t,i)=>`<div><b>${i+1}.</b> ${t}</div>`).join("")}</div></div>
+    <div><h3>Today's two demos</h3><div class="demolist">${S.demos.map(d=>`<div>${d}</div>`).join("")}</div>
+    <p class="hint">Notebook: <code>${S.notebooks[0]}</code> — open it before we start.</p></div></div></div>`;
+};
+R.idea=(e,card)=>{
+  const c=card.c;
+  e.innerHTML=head(card,esc(c.title)+(c.tag?`<span class="tag ${c.tag}">${c.tag}</span>`:""))+
+   `<div class="two wide-left"><div><ul class="points">${c.points.map(p=>`<li>${p}</li>`).join("")}</ul>${c.note?`<div class="notebox">${c.note}</div>`:""}</div>
+    <div>${c.formulas?`<table class="ftab"><tr><th>${(c.fhead||["given","Python"])[0]}</th><th>${(c.fhead||["given","Python"])[1]}</th></tr>
+      ${c.formulas.map(([f,p])=>`<tr><td>${f}</td><td>${esc(p)}</td></tr>`).join("")}</table>`:""}
+    ${c.code?codeHTML(c.code):""}</div></div>${c.visual?`<div class="vis" style="margin-top:16px">${DIAG[c.visual]()}</div>`:""}`;
+};
+R.predict=(e,card)=>{
+  const p=card.c;
+  e.innerHTML=head(card,p.question)+`<div class="two">
+    <div>${codeHTML(p.code,{big:true})}<p class="ask">Say <b>A, B, C or D</b> out loud. Then press <kbd>&rarr;</kbd> to reveal.</p></div>
+    <div><div class="opts">${p.options.map((o,i)=>`<button class="opt" data-i="${i}"><span class="l">${"ABCD"[i]}</span><pre>${esc(o)}</pre></button>`).join("")}</div>
+      <div class="reveal" id="pv"><div class="cap">Python printed</div><pre class="out">${esc(p.output)}</pre><div class="notebox">${p.explain}</div></div></div></div>`;
+  let shown=false;
+  const show=()=>{ shown=true; e.querySelectorAll(".opt").forEach(b=>{ const i=+b.dataset.i; b.classList.toggle("right",i===p.answer); b.classList.toggle("dim",i!==p.answer); }); $("#pv").classList.add("show"); };
+  e.querySelectorAll(".opt").forEach(b=>b.onclick=show);
+  return {advance(){ if(!shown){ show(); return true; } return false; }};
+};
+function varsTable(vars,prev){
+  const keys=Object.keys(vars||{});
+  if(!keys.length) return `<div style="padding:6px 8px" class="stepinfo">(nothing yet)</div>`;
+  return `<table class="vars">`+keys.map(k=>{ const ch=prev&&JSON.stringify(prev[k])!==JSON.stringify(vars[k]);
+    return `<tr class="${ch?"chg":""}"><td>${esc(k)}</td><td>${esc(vars[k])}</td></tr>`; }).join("")+`</table>`;
+}
+R.trace=(e,card)=>{
+  const T=card.c; let i=-1;
+  e.innerHTML=head(card,esc(T.title))+
+   `<div class="two"><div>${codeHTML(T.code,{big:true})}
+     <div class="row" style="margin-top:10px"><button class="btn sm" id="tb">&larr; Step back</button><button class="btn sm primary" id="tn">Step &rarr;</button><button class="btn sm" id="tr">Restart</button><span class="stepinfo" id="ti"></span></div>
+     <p class="stepinfo" style="margin-top:8px">The highlighted line has <b>just run</b>.</p></div>
+    <div><div class="note" id="tnote"></div><div class="cap">Variables</div><div id="tvars"></div><div class="cap">Output</div><pre class="out" id="tout"></pre></div></div>`;
+  const draw=()=>{
+    const S=T.steps, s=S[i], p=S[i-1];
+    e.querySelectorAll(".code .ln").forEach(l=>l.classList.toggle("cur",!!s&&+l.dataset.l===s.line));
+    $("#ti").textContent=`step ${i+1} of ${S.length}`;
+    const o=$("#tout");
+    if(!s){ $("#tnote").innerHTML="Press <b>Step &rarr;</b> to run the first line."; $("#tvars").innerHTML=`<div class="frame"><div class="fh">Main program</div>${varsTable({},null)}</div>`;
+      o.className="out empty"; o.textContent="(nothing printed yet)"; return; }
+    $("#tnote").innerHTML=s.note||"&nbsp;";
+    let h=`<div class="frame"><div class="fh">Main program</div>${varsTable(s.g,p?p.g:null)}</div>`;
+    if(s.fn) h+=`<div class="frame"><div class="fh">Inside ${esc(s.fn)}()</div>${varsTable(s.loc,p&&p.fn===s.fn?p.loc:null)}</div>`;
+    $("#tvars").innerHTML=h;
+    if(s.out){ o.className="out"; o.textContent=s.out.replace(/\n$/,""); } else { o.className="out empty"; o.textContent="(nothing printed yet)"; }
+  };
+  const step=d=>{ const j=i+d; if(j<-1||j>=T.steps.length) return false; i=j; draw(); return true; };
+  $("#tn").onclick=()=>step(1); $("#tb").onclick=()=>step(-1); $("#tr").onclick=()=>{ i=-1; draw(); };
+  draw();
+  return {advance(){ return step(1); }, back(){ return step(-1); }};
+};
+R.puzzle=(e,card)=>{
+  const P=card.c, lv=P.lines.map(()=>0);
+  e.innerHTML=head(card,"Put each line at the right indentation",P.task)+`<div class="pz" id="pz"></div>
+    <div class="row" style="margin-top:14px"><button class="btn primary" id="pc">Check</button><button class="btn" id="pa">Show the answer</button><button class="btn" id="pr">Reset</button></div><div class="fb" id="pf"></div>
+    <p class="stepinfo" style="margin-top:10px">Each <b>&rarr;</b> adds 4 spaces.</p>`;
+  const draw=(res)=>{ $("#pz").innerHTML=P.lines.map((l,i)=>`<div class="pzl ${res?(res[i]?"ok":"no"):""}"><div class="ctl"><button data-i="${i}" data-d="-1">&larr;</button><button data-i="${i}" data-d="1">&rarr;</button></div><div class="txt">${"    ".repeat(lv[i])}${hl(l)}</div><span class="mark">${res?(res[i]?"✓":"✗"):""}</span></div>`).join("");
+    $("#pz").querySelectorAll("button").forEach(b=>b.onclick=()=>{ const i=+b.dataset.i; lv[i]=Math.max(0,Math.min(3,lv[i]+ +b.dataset.d)); $("#pf").textContent=""; draw(); }); };
+  $("#pc").onclick=()=>{ const res=lv.map((x,i)=>x===P.levels[i]); draw(res); const n=res.filter(x=>x).length;
+    $("#pf").innerHTML= n===res.length?"<b style='color:var(--ok)'>All correct.</b> The indentation now says exactly which lines belong to the loop.":`<b style="color:var(--bad)">${res.length-n} line${res.length-n>1?"s":""} not right yet.</b> Ask: which line ending in a colon does this line belong to?`; };
+  $("#pa").onclick=()=>{ P.levels.forEach((x,i)=>lv[i]=x); draw(P.levels.map(()=>true)); $("#pf").textContent="The answer."; };
+  $("#pr").onclick=()=>{ lv.fill(0); $("#pf").textContent=""; draw(); };
+  draw();
+};
+function clickLine(e,answer,onPick){
+  let done=false;
+  const pick=l=>{ if(done) return; done=true;
+    e.querySelectorAll(".code .ln").forEach(x=>{ const n=+x.dataset.l; if(n===answer) x.classList.add("right"); else if(n===l) x.classList.add("wrong"); }); onPick(l); };
+  e.querySelectorAll(".code .ln").forEach(x=>x.onclick=()=>pick(+x.dataset.l));
+  return {advance(){ if(!done){ pick(0); return true; } return false; }};
+}
+R.error=(e,card)=>{
+  const E=card.c;
+  e.innerHTML=head(card,"Which line does Python point to?","Click the line. The error names the line where Python <i>noticed</i> the problem.")+
+   `<div class="two"><div>${codeHTML(E.code,{big:true,click:true})}<div class="errline"><b>${esc(E.etype)}</b>: ${esc(E.msg)}</div></div>
+    <div><div class="reveal" id="er"><div class="fb" id="ef"></div><div class="cause">${E.cause}</div></div></div></div>`;
+  return clickLine(e,E.line,l=>{ $("#ef").innerHTML= l===E.line?`<b style="color:var(--ok)">Yes, line ${E.line}.</b>`: l?`<b style="color:var(--bad)">Python points at line ${E.line}.</b>`:`Python points at <b>line ${E.line}</b>.`; $("#er").classList.add("show"); });
+};
+R.bug=(e,card)=>{
+  const B=card.c;
+  e.innerHTML=head(card,esc(B.title),"<b>No error message.</b> The code runs, but the answer is wrong. Click the line that causes it.")+
+   `<div class="two"><div>${codeHTML(B.code,{big:true,click:true})}
+     <div class="exp"><div class="box want"><span class="k">we wanted</span>${esc(B.expected)}</div><div class="box got"><span class="k">Python printed</span>${esc(B.got)}</div></div></div>
+    <div><div class="reveal" id="er"><div class="fb" id="ef"></div><div class="cause">${B.cause}</div></div></div></div>`;
+  return clickLine(e,B.line,l=>{ $("#ef").innerHTML= l===B.line?`<b style="color:var(--ok)">Yes, line ${B.line}.</b>`: l?`<b style="color:var(--bad)">The cause is line ${B.line}.</b>`:`The cause is <b>line ${B.line}</b>.`; $("#er").classList.add("show"); });
+};
+R.demo=(e,card)=>{
+  const D=card.c, b=card.block, nb=DATA.sessions[card.session].notebooks[0];
+  e.innerHTML=head(card,esc(D.title),`Watch it being typed. Then run it yourself in <code>${nb}</code>.`)+
+   `<div class="two wide-left"><div>${codeHTML(D.code)}
+     ${D.output!==undefined?`<div class="row" style="margin-top:10px"><button class="btn primary" id="runb">&#9654; Run</button><span class="hint">or press <kbd>&rarr;</kbd></span></div>
+      <div class="reveal" id="ro"><div class="cap">Output</div><pre class="out">${esc(D.output)}</pre></div>`:`<p class="hint">${D.hint||"Run it in Colab to see the output."}</p>`}</div>
+    <div><ul class="points">${D.points.map(p=>`<li>${p}</li>`).join("")}</ul></div></div>`;
+  if(D.output===undefined) return {};
+  let shown=false; const show=()=>{ shown=true; $("#ro").classList.add("show"); $("#runb").disabled=true; };
+  $("#runb").onclick=show;
+  return {advance(){ if(!shown){ show(); return true; } return false; }};
+};
+R.classify=(e,card)=>{
+  const C=card.c, pick=C.items.map(()=>-1); let checked=false;
+  e.innerHTML=head(card,esc(C.title),C.task)+
+   `<div class="cls">${C.items.map((it,i)=>`<div class="clrow" id="cl${i}"><div class="cli"><code>${esc(it)}</code></div>
+      <div class="clb">${C.bins.map((b,j)=>`<button class="binb" data-i="${i}" data-j="${j}">${b}</button>`).join("")}</div><span class="mark" id="cm${i}"></span></div>`).join("")}</div>
+    <div class="row" style="margin-top:14px"><button class="btn primary" id="ck">Check</button><button class="btn" id="sa">Show the answer</button><button class="btn" id="rs2">Reset</button></div>
+    <div class="fb" id="fb"></div><div class="reveal" id="af"><div class="notebox">${C.after}</div></div>`;
+  const paint=()=>{ C.items.forEach((_,i)=>{ e.querySelectorAll(`.binb[data-i="${i}"]`).forEach(b=>b.classList.toggle("on",+b.dataset.j===pick[i]));
+    const ok=pick[i]===C.answers[i]; $("#cl"+i).classList.toggle("ok",checked&&ok); $("#cl"+i).classList.toggle("no",checked&&pick[i]>=0&&!ok);
+    $("#cm"+i).textContent=checked?(ok?"✓":(pick[i]<0?"?":"✗")):""; }); };
+  e.querySelectorAll(".binb").forEach(b=>b.onclick=()=>{ pick[+b.dataset.i]=+b.dataset.j; checked=false; $("#fb").textContent=""; paint(); });
+  const done=()=>{ checked=true; paint(); const n=C.items.filter((_,i)=>pick[i]===C.answers[i]).length;
+    $("#fb").innerHTML= n===C.items.length?`<b style="color:var(--ok)">All ${n} right.</b>`:`<b style="color:var(--bad)">${n} of ${C.items.length} right.</b> Look again at the ones marked &#10007;.`;
+    if(n===C.items.length) $("#af").classList.add("show"); };
+  $("#ck").onclick=done;
+  $("#sa").onclick=()=>{ C.answers.forEach((a,i)=>pick[i]=a); checked=true; paint(); $("#fb").textContent="The answer."; $("#af").classList.add("show"); };
+  $("#rs2").onclick=()=>{ pick.fill(-1); checked=false; $("#fb").textContent=""; $("#af").classList.remove("show"); paint(); };
+  paint();
+  return {advance(){ if(!checked){ done(); return true; } if(!$("#af").classList.contains("show")){ $("#af").classList.add("show"); return true; } return false; }};
+};
+R.yourturn=(e,card)=>{
+  const c=card.c, X=DATA.exercises[c.notebook]||[], m=c.minutes||12;
+  e.innerHTML=head(card,`Your turn: exercises ${X.length?X[0].id+"–"+X[X.length-1].id:""}`,c.sub)+
+   `<div class="exlist">${X.map(x=>`<div class="ex"><div class="h"><span class="id">${x.id}</span><span class="kind">${esc(x.kind)}</span><b>${esc(x.title)}</b>${x.star?`<span class="star">&#9733; extra</span>`:""}</div><div class="task">${x.task}</div></div>`).join("")}</div>
+   <div class="chatbar"><span>${c.chat}</span><span style="flex:1"></span><button class="btn blue" id="tm">Start ${m}-minute timer</button></div>`;
+  $("#tm").onclick=()=>startTimer(m);
+};
+R.table=(e,card)=>{
+  const T=card.c;
+  e.innerHTML=head(card,esc(T.title))+`<table class="etab"><thead><tr><th>Examinable · Python</th><th>Not examinable · given</th></tr></thead>
+   <tbody>${T.rows.map(([a,b])=>`<tr><td style="color:inherit;font-weight:500">${a}</td><td>${b}</td></tr>`).join("")}</tbody></table>
+   <div class="chatbar" style="margin-top:18px"><span>${T.note}</span></div>`;
+};
+R.summary=(e,card)=>{
+  e.innerHTML=head(card,DATA.summary_title)+`<table class="sum"><thead><tr>${DATA.summary_heads.map(h=>`<th>${h}</th>`).join("")}</tr></thead>
+   <tbody>${DATA.summary.map(r=>`<tr>${r.map(x=>`<td>${esc(x)}</td>`).join("")}</tr>`).join("")}</tbody></table>
+   <div class="chatbar" style="margin-top:18px"><span>${DATA.summary_note}</span></div>`;
+};
+
+/* ---------------- live cards ---------------- */
+R.live=(e,card)=>{
+  const L=card.c;
+  const sub={types:"<b>Walk the round trip.</b> Each step shows what you are holding and what type it is.",
+    dictbuild:"<b>Change the reading.</b> The dictionary, the JSON text and what the receiver gets are all rebuilt as you type.",
+    callback:"<b>Send a reading.</b> Your callback is not running until a message lands; then it runs once, from top to bottom."}[L.mode];
+  if(window.LIVE_STOP) LIVE_STOP();
+  e.innerHTML=head(card,esc(L.title),sub)+`<div class="two wide-left"><div id="stageL"></div>
+    <div><pre class="livecode" id="lc"></pre><ul class="tasks">${L.tasks.map(t=>`<li>${t}</li>`).join("")}</ul>
+    <div class="row" style="margin-top:10px"><button class="btn sm" id="rs">Start again</button></div></div></div>`;
+  live8(L,$("#stageL"));
+};
+function live8(L,box){
+  if(L.mode==="types"){
+    const READ={machine:"M3",temp_c:91.4,ok:true};
+    const dictTxt=`{'machine': 'M3', 'temp_c': 91.4, 'ok': True}`;
+    const jsonTxt=`{"machine": "M3", "temp_c": 91.4, "ok": true}`;
+    const STEPS=[
+      {who:"you", line:'reading = {"machine": "M3", "temp_c": 91.4, "ok": True}', val:dictTxt, type:"dict", note:"You build it. Values have names on them, and you can index it: <code>reading[\"temp_c\"]</code>."},
+      {who:"you", line:"payload = json.dumps(reading)", val:jsonTxt, type:"str", note:"Still on your laptop. It <b>looks</b> like the dictionary, but it is one long string - and <code>True</code> became <code>true</code>."},
+      {who:"library", line:"client.publish(TOPIC, payload)", val:"b'"+jsonTxt+"'", type:"bytes", note:"The library turns the text into bytes and puts them on the network. <b>You do not write this step.</b>"},
+      {who:"library", line:"msg.payload   (inside the callback)", val:"b'"+jsonTxt+"'", type:"bytes", note:"The same bytes arrive at the other program. Notice the <code>b</code> in front of the quotes."},
+      {who:"you", line:"text = msg.payload.decode()", val:jsonTxt, type:"str", note:"Bytes back to text. Still a string: indexing it by a key would be a <code>TypeError</code>."},
+      {who:"you", line:"reading = json.loads(text)", val:dictTxt, type:"dict", note:"A dictionary again, in a different program, on a different computer. <b>Now</b> you can write <code>reading[\"temp_c\"]</code>."}];
+    let k=0;
+    box.innerHTML=`<div class="panelbox">
+        <div class="row" style="margin-bottom:10px"><button class="btn sm" id="bk">&larr; back</button><button class="btn sm primary" id="fw">next step &rarr;</button>
+          <span class="stepinfo" id="si"></span></div>
+        <div id="chain"></div>
+        <div class="cap">what you are holding now</div><pre class="out" id="val"></pre>
+        <div class="note" id="nt" style="margin-top:10px"></div></div>`;
+    const draw=()=>{
+      $("#chain").innerHTML=STEPS.map((s,i)=>`<div class="codeline ${i===k?"hit":(i<k?"":"dead")}" style="margin:3px 0">
+        <b style="color:${i===k?"var(--red)":"var(--ink-3)"}">${s.type.padEnd(5)}</b>  ${hl(s.line)}
+        <span class="stepinfo"> &nbsp;${s.who==="you"?"you write this":"the library does this"}</span></div>`).join("");
+      $("#si").textContent=`step ${k+1} of ${STEPS.length}`;
+      $("#val").textContent=STEPS[k].val;
+      $("#nt").innerHTML=STEPS[k].note;
+      $("#lc").innerHTML=`<span class="cm"># where the value is now</span>
+${STEPS[k].who==="you"?"your program":"the network / the library"}
+
+<span class="cm"># what you are holding</span>
+type  = <span class="res">&lt;class '${STEPS[k].type}'&gt;</span>
+value = <span class="res">${esc(STEPS[k].val)}</span>
+
+<span class="cm"># can you write reading["temp_c"] yet?</span>
+<span class="${STEPS[k].type==="dict"?"on":"res"}">${STEPS[k].type==="dict"?"yes":"no  - it is a "+STEPS[k].type+" right now"}</span>`;
+    };
+    $("#fw").onclick=()=>{ k=Math.min(STEPS.length-1,k+1); draw(); };
+    $("#bk").onclick=()=>{ k=Math.max(0,k-1); draw(); };
+    $("#rs").onclick=()=>{ k=0; draw(); };
+    draw(); return;
+  }
+  if(L.mode==="dictbuild"){
+    let machine="M3", temp=91.4, ok=true, hum=false;
+    box.innerHTML=`<div class="panelbox">
+        <div class="tin"><span>machine</span><input type="text" id="n1" value="M3" maxlength="10"></div>
+        <div class="sl"><span>temp_c</span><input type="range" id="s1" min="75" max="99" step="0.1" value="91.4"><b id="v1">91.4</b></div>
+        <div class="row" style="margin:8px 0"><label class="ck"><input type="checkbox" id="c1" checked> <code>"ok": True</code></label>
+          <label class="ck"><input type="checkbox" id="c2"> add <code>"humidity_pct"</code></label></div>
+        <div class="cap">the dictionary you built</div><pre class="out" id="d1"></pre>
+        <div class="cap">json.dumps(reading) - the text that travels</div><pre class="out" id="d2"></pre>
+        <div class="cap">what the receiver takes out</div><pre class="out" id="d3"></pre></div>`;
+    const draw=()=>{
+      const py=`{'machine': '${machine}', 'temp_c': ${temp}, 'ok': ${ok?"True":"False"}${hum?", 'humidity_pct': 45":""}}`;
+      const js=`{"machine": "${machine}", "temp_c": ${temp}, "ok": ${ok?"true":"false"}${hum?', "humidity_pct": 45':""}}`;
+      $("#d1").textContent=py; $("#d2").textContent=js;
+      $("#d3").textContent=`reading["machine"]  ->  '${machine}'
+reading["temp_c"]   ->  ${temp}
+reading["ok"]       ->  ${ok?"True":"False"}` + (hum?`
+reading["humidity_pct"] ->  45`:`
+reading["humidity_pct"] ->  KeyError`);
+      $("#lc").innerHTML=`reading = {
+    "machine": <span class="res">"${machine}"</span>,
+    "temp_c": <span class="res">${temp}</span>,
+    "ok": <span class="res">${ok?"True":"False"}</span>,${hum?'\n    "humidity_pct": <span class="res">45</span>,':""}
+}
+payload = json.dumps(reading)
+print(payload)
+<span class="res">${esc(js)}</span>
+
+<span class="cm"># the message is ${js.length} characters long</span>
+<span class="cm"># Python True became JSON ${ok?"true":"false"} - lower case</span>`;
+    };
+    $("#n1").oninput=ev=>{ machine=ev.target.value||"M3"; draw(); };
+    $("#s1").oninput=ev=>{ temp=Math.round(+ev.target.value*10)/10; $("#v1").textContent=temp.toFixed(1); draw(); };
+    $("#c1").onchange=ev=>{ ok=ev.target.checked; draw(); };
+    $("#c2").onchange=ev=>{ hum=ev.target.checked; draw(); };
+    $("#rs").onclick=()=>{ machine="M3"; temp=91.4; ok=true; hum=false;
+      $("#n1").value="M3"; $("#s1").value=91.4; $("#v1").textContent="91.4"; $("#c1").checked=true; $("#c2").checked=false; draw(); };
+    draw(); return;
+  }
+  if(L.mode==="callback"){
+    let limit=90, alarms=0, seen=0, stream=null, last=null;
+    const temps=[91.4,84.0,95.2,88.1,92.0,79.6,90.6,86.4,93.3,81.2];
+    box.innerHTML=`<div class="panelbox">
+        <div class="row" style="margin-bottom:8px"><button class="btn sm primary" id="go">send a reading</button>
+          <label class="ck"><input type="checkbox" id="st"> the sender's stream (one every 1.5 s)</label></div>
+        <div class="sl"><span>alarm above</span><input type="range" id="s1" min="80" max="96" step="0.5" value="90"><b id="v1">90</b></div>
+        <div id="steps" style="margin:10px 0"></div>
+        <div class="cap">your program's output</div><div class="console" id="con"></div></div>`;
+    const STEPLINES=["a message lands on your topic",
+      "the library calls on_message(client, userdata, msg)",
+      "text    = msg.payload.decode()",
+      "reading = json.loads(text)",
+      'if reading["temp_c"] > LIMIT:',
+      "print(...)  - then the callback finishes and waits again"];
+    const drawSteps=(active)=>{ $("#steps").innerHTML=STEPLINES.map((l,i)=>
+      `<div class="codeline ${active>=i?"hit":"dead"}" style="margin:2px 0">${i<2?`<span class="stepinfo">${l}</span>`:hl(l)}</div>`).join(""); };
+    const out=(cls,txt)=>{ const c=$("#con"); const d=document.createElement("div"); d.innerHTML=`<span class="${cls}">${esc(txt)}</span>`;
+      c.appendChild(d); c.scrollTop=c.scrollHeight; };
+    const fire=()=>{
+      if(!document.getElementById("con")){ clearInterval(stream); stream=null; return; }
+      const t=temps[seen%temps.length]; seen++; last=t; const ts=t.toFixed(1);
+      const alarm=t>limit; if(alarm) alarms++;
+      drawSteps(5);
+      out(alarm?"me":"m",(alarm?"ALARM":"ok   ")+" M3 "+ts);
+      $("#lc").innerHTML=`<span class="cm"># nothing in your program is looping.</span>
+<span class="cm"># the library called your function, once, with:</span>
+msg.topic   = <span class="res">"ine315/ahmed/telemetry"</span>
+msg.payload = <span class="res">b'{"machine": "M3", "temp_c": ${ts}, "ok": true}'</span>
+
+text    = msg.payload.decode()
+reading = json.loads(text)
+reading["temp_c"] = <span class="res">${ts}</span>
+
+if reading["temp_c"] > ${limit}:      <span class="res">${alarm?"True":"False"}</span>
+<span class="${alarm?"res":"on"}">${alarm?'    print("ALARM", ...)':'    print("ok   ", ...)'}</span>
+
+<span class="cm"># messages seen: ${seen}   alarms: ${alarms}</span>`;
+    };
+    $("#go").onclick=fire;
+    $("#s1").oninput=ev=>{ limit=+ev.target.value; $("#v1").textContent=limit; };
+    $("#st").onchange=ev=>{ clearInterval(stream); stream=null; if(ev.target.checked) stream=setInterval(fire,1500); };
+    window.LIVE_STOP=()=>{ clearInterval(stream); stream=null; };
+    $("#rs").onclick=()=>{ clearInterval(stream); stream=null; $("#st").checked=false; alarms=0; seen=0; $("#con").innerHTML="";
+      drawSteps(-1); $("#lc").innerHTML='<span class="cm"># press "send a reading" - nothing runs until one arrives</span>'; };
+    drawSteps(-1);
+    $("#lc").innerHTML='<span class="cm"># your callback is written, handed over, and waiting.</span>\n<span class="cm"># press "send a reading" to make a message land.</span>';
+    return;
+  }
+}
+/* ---------------- navigation ---------------- */
+const chips=$("#chips");
+let ch=`<button class="chip" data-t="welcome"><b>W9</b> Start</button>`;
+[1,2].forEach(s=>{ ch+=`<button class="chip sep" data-t="s${s}">&#9656; Session ${s}</button>`;
+  DATA.blocks.filter(b=>b.session===s).forEach(b=>ch+=`<button class="chip" data-t="${b.id}">${esc(b.short)}</button>`); });
+ch+=`<button class="chip" data-t="summary">Summary</button>`;
+chips.innerHTML=ch;
+chips.querySelectorAll(".chip").forEach(c=>c.onclick=()=>{ const t=c.dataset.t;
+  const i=CARDS.findIndex(x=> t==="welcome"?x.type==="welcome": t==="summary"?x.type==="summary":
+    (t[0]==="s"&&t.length===2)?(x.type==="session"&&x.session===+t[1]): (x.block&&x.block.id===t)); go(i); });
+function go(i){
+  if(window.LIVE_STOP){ LIVE_STOP(); window.LIVE_STOP=null; }
+  cur=Math.max(0,Math.min(CARDS.length-1,i)); const c=CARDS[cur];
+  $("#stage").innerHTML=`<article class="card" id="card"></article>`;
+  ctl=R[c.type]($("#card"),c)||{};
+  const key=c.type==="welcome"?"welcome":c.type==="summary"?"summary":c.type==="session"?"s"+c.session:c.block.id;
+  chips.querySelectorAll(".chip").forEach(x=>x.classList.toggle("on",x.dataset.t===key));
+  const on=chips.querySelector(".chip.on"); if(on) on.scrollIntoView({block:"nearest",inline:"nearest"});
+  if(c.block){ const inB=CARDS.filter(x=>x.block===c.block); $("#where").textContent=`Session ${c.session} · ${c.block.short} · ${c.label} · ${inB.indexOf(c)+1} of ${inB.length}`; }
+  else $("#where").textContent=c.label;
+  $("#prog").style.width=(cur/(CARDS.length-1)*100)+"%";
+  $("#prevBtn").disabled=cur===0; $("#nextBtn").disabled=cur===CARDS.length-1;
+  history.replaceState(null,"","#"+cur); window.scrollTo(0,0);
+}
+function next(){ if(ctl.advance&&ctl.advance()) return; if(cur<CARDS.length-1) go(cur+1); }
+function prev(){ if(ctl.back&&ctl.back()) return; if(cur>0) go(cur-1); }
+$("#nextBtn").onclick=()=>{ if(cur<CARDS.length-1) go(cur+1); };
+$("#prevBtn").onclick=()=>{ if(cur>0) go(cur-1); };
+document.addEventListener("keydown",ev=>{ if(ev.target.matches("input,textarea,select")) return;
+  if(ev.key==="ArrowRight"||ev.key==="PageDown"){ ev.preventDefault(); next(); }
+  if(ev.key==="ArrowLeft"||ev.key==="PageUp"){ ev.preventDefault(); prev(); } });
+go(parseInt(location.hash.slice(1))||0);
+</script>
+</body>
+</html>
